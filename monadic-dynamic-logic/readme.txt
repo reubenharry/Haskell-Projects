@@ -1,0 +1,1 @@
+Implements a dynamic epistemic propositional logic, using a state monad. End goal is to upgrade into a predicate logic, with multiple agents, and to add probability. Would like to implement to blue-eyed islanders problem.
