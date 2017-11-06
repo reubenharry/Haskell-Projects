@@ -9,11 +9,9 @@ Portability : GHC
 
 -}
 
-{-# LANGUAGE
-  GADTs,
-  DeriveFunctor,
-  ScopedTypeVariables
-   #-}
+
+{-# LANGUAGE GADTs,DeriveFunctor,ScopedTypeVariables,RankNTypes,StandaloneDeriving,TypeFamilies,FlexibleInstances,MultiParamTypeClasses,GeneralizedNewtypeDeriving,RankNTypes,TupleSections,FlexibleContexts #-}
+
 
 module Control.Monad.Bayes.Trace (
   Trace,

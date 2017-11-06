@@ -9,9 +9,9 @@ Portability : GHC
 
 -}
 
-{-# LANGUAGE
-  ScopedTypeVariables
- #-}
+
+{-# LANGUAGE ScopedTypeVariables,RankNTypes,StandaloneDeriving,TypeFamilies,FlexibleInstances,MultiParamTypeClasses,GeneralizedNewtypeDeriving,RankNTypes,TupleSections,FlexibleContexts #-}
+
 
 module Control.Monad.Bayes.Inference (
   rejection,
