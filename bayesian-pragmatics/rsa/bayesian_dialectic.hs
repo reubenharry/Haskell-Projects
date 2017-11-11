@@ -2,6 +2,9 @@ enact haskell rsa plan with quotes: write the impossible model:
 	clarity: you want the code to have an s1 and use butler quote about gender being performative here,  ok, the point with the iconicity is that, in fact, s0 is learnt and varies cross culturally, but we try to synchronize it, other quotes: no private language
 	can't just assume a role, because that posits that roles are real: As opposed to a view such as Erving Goffman's which posits a self which assumes and exchanges various 'roles' within the complex social expectations of the 'game' of modern life,13 I am suggesting that this self is not only irretrievably 'outside,' constituted in social dis- course, but that the ascription of interiority is itself a publically regulated and sanc- tioned form of essence fabrication.
 
+the self is nothing but its act of synthesis
+coeval with original sin
+
 import Numeric.LogDomain
 import Control.Monad (liftM2)
 import Control.Monad.Bayes.Class

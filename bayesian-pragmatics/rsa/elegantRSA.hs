@@ -33,7 +33,7 @@ s n w = do
 l :: Listener
 l 0 u = do
 	all <- if u=="all" then bernoulli 0.9 else bernoulli 0.2
-	output <- if all then return 10 else uniformDraw [1..9]
+	output <- if all then return 10 else uniformD [1..9]
 	return output
 l n u = do
     w <- l (n-1) u
@@ -44,10 +44,4 @@ l n u = do
 -- prints out the first 5 listener depth probabilities of being in '1' on hearing 'blue'
 main = print . take 5 . fmap (\n -> (mass (l n "some") 10, mass (s n 10) "some")) $ [0..]
 -- > [0.5,0.7499999999999999,0.8999999999999999,0.9878048780487805,0.999847607436757]
-
-uniformDraw :: (MonadBayes d) => [a] -> d a
-uniformDraw [a] = return a
-uniformDraw x = do
-  p <- bernoulli $ (1.0/(fromIntegral $ length x))
-  if p then return  (head x) else uniformDraw $ tail x
 
