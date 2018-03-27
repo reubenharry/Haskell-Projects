@@ -1,2 +1,0 @@
-# Haskell-Projects
-See title

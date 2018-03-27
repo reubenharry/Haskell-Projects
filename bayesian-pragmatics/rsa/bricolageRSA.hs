@@ -31,11 +31,14 @@ type Tough = Bool
 type Utterance = String
 type World = (FromCity,Tough)
 
---the possible utterances and worlds: both are distributions
-worlds = do
-  a <- bernoulli 0.1
-  b <- bernoulli 0.5
-  return (a,b)
+
+-- fromCity and Tough are correlated: 
+  -- if you're from city, vernacluar model says you're more likely to be tough 
+--the possible utterances and world_prior: both are distributions
+world_prior = do
+  fromCity <- bernoulli 0.1
+  tough <- if fromCity then bernoulli 0.7 else bernoulli 0.2
+  return (fromCity,tough)
 
 aspects = bernoulli 0.5
 --instead of having a denotational semantics, we have a speaker model s0 at the base of the recursion
@@ -45,7 +48,7 @@ vernacular w = do
     -- fromCity <- if w1 then bernoulli 0.8 else bernoulli 0.001
     -- tough <- if w2 then bernoulli 0.6 else bernoulli 0.3
     -- noise <- bernoulli 0.001
-    if (w1 && w2) then return "in" else return "ing" 
+    if (w1&&w2) then return "in" else return "ing" 
 --mutually recursive definitions of pragmatic speaker and listener
 --n is the number of levels of recursion. (l 2) models (s 2) who models (l 1) who models (s 1) who... 
 -- s :: Speaker
@@ -54,43 +57,43 @@ s0 w aspect = vernacular w
 --we want q to represent the intent of the speaker: it biases the world in some direction
 s1 w aspect = do
   -- u <- s0 w aspect
-  u <- uniformDraw ["in","ing"]
-  let utility = mass (fmap (aspect) (l1 u) ) (aspect w) :: Double
+  u <- uniformD ["in","ing"]
+  let utility = mass (fmap (aspect) (l0 u) ) (aspect w) :: Double
   factor $ realToFrac utility
   return u
 
 s2 w = do
   aspect <- aspects
   -- u <- s0 w aspect
-  u <- uniformDraw ["in","ing"]
-  let utility = mass (fmap fst (l2 u)) w :: Double
+  u <- uniformD ["in","ing"]
+  let utility = mass (fmap fst (l1 u)) w :: Double
   factor $ realToFrac utility
   return u 
 
 -- l 1 u = do
---     --samples a world uniformly from the possible worlds
---     w <- worlds
+--     --samples a world uniformly from the possible world_prior
+--     w <- world_prior
 --     --does a condition on the truth of the utterance in the sampled world
 --     factor $ mass (s 0 w) u
 --     return w
-l1_a u = do
+l0_a u = do
     a <- aspects  
     let aspect = if a then fst else snd
-    w <- worlds
+    w <- world_prior
     let speaker_out = s0 w aspect
     factor $ realToFrac $ (mass speaker_out u :: Double)
     return a
 
-l1 u = do
+l0 u = do
     a <- aspects  
     let aspect = if a then fst else snd
-    w <- worlds
+    w <- world_prior
     let speaker_out = s0 w aspect
     factor $ realToFrac $ (mass speaker_out u :: Double)
     return w
 
-l2 u = do
-    w <- worlds
+l1 u = do
+    w <- world_prior
     a <- aspects  
     let aspect = if a then fst else snd
     let speaker_out = s1 w aspect
@@ -105,9 +108,5 @@ l2 u = do
 display :: (Ord a, NumSpec a1, Real a1) => Dist a1 a -> [(a, a1)]
 display = sortBy (flip compare `on` (snd)) . enumerate
 -- --util
-uniformDraw :: (MonadBayes d) => [a] -> d a
-uniformDraw [a] = return a
-uniformDraw x = do
-  p <- bernoulli $ (1.0/(fromIntegral $ length x))
-  if p then return  (head x) else uniformDraw $ tail x
+
 

@@ -1,0 +1,140 @@
+//  what we're modelling:
+//     the utterance: "well that talk went well" after a talk which was clearly
+//     (i.e. with everyone's common knowledge), a disaster.
+//     we want an l1 to be able to infer that the common knowledge is that 
+//     the talk was terrible, which licenses the s1 to say otherwise.
+//     this relies on the fact that the more weight on the talk being terrible there
+//     is encoded in the prior, the less informative saying the opposite is
+
+// the worlds
+var worlds = ['terrible','ok','great']
+//  the utterances just correspond to the worlds
+var utterances = worlds
+
+// the l0 prior_params would ideally be a mean and variance characterizing a
+// distribution, but here they are 3 probabilities, corresponding to the density
+// of each of the world states in a categorical distribution
+//  the l0 samples a world from this prior and conditions so that the utterance
+//  most likely accords with this world (but with some noise)
+var l0 = function(prior_params,u) {
+  return Infer({method: 'enumerate'}, function() {
+    var w = categorical({ps:prior_params,vs:worlds})
+    factor (u==w?Math.log(0.9):Math.log(0.1))
+    return w
+  })
+}
+
+// the s1 draws an utterance uniformly, and calls the l0 with the prior params
+// it receives. it then factors in the normal RSA way
+var s1 = function(prior_params,w) {
+  return Infer({method: 'enumerate'}, function() {
+    var u = uniformDraw(utterances)
+    var l0_result = l0(prior_params,u)
+    factor (l0_result.score(w))
+    return u
+  })
+}
+
+// joint inference over prior params and world, given utterance.
+// the distribution over prior params is a bernoulli between 
+//  [0.9,0.05,0.05] and [0.99,0.005,0.005]. 
+// in other words, the talk was either most likely terrible or most likely
+//  really terrible. this encodes the common knowledge of the talk being bad.
+var l1 = function(u) {
+  return Infer({method: 'enumerate',samples:5000}, function() {
+    
+//     var speaker_prior_ps = dirichlet({alpha:Vector([6,2,1])})
+//     var listener_prior_ps = dirichlet({alpha:Vector([6,2,1])})
+
+    
+    var speaker_prior_ps = flip(0.1)?[0.6,0.3,0.1]:[0.65,0.3,0.05]
+    var listener_prior_ps = flip(0.1)?[0.6,0.3,0.1]:[0.65,0.3,0.05]
+//         uniformDraw([[0.9,0.09,0.01],[0.905,0.09,0.0005]])
+    var w = categorical({ps:listener_prior_ps,vs:worlds})
+    var s1_result = s1(speaker_prior_ps,w)
+    factor (s1_result.score(u))
+//     return [listener_prior_ps,w]
+    return [speaker_prior_ps,w]
+  })
+}
+
+var l1_prior = function() {
+  return Infer({method: 'enumerate'}, function() {
+    
+//     var speaker_prior_ps = dirichlet({alpha:Vector([6,2,1])})
+//     var listener_prior_ps = dirichlet({alpha:Vector([6,2,1])})
+
+    
+    var speaker_prior_ps = flip(0.1)?[0.6,0.3,0.1]:[0.65,0.3,0.05]
+    var listener_prior_ps = flip(0.1)?[0.6,0.3,0.1]:[0.65,0.3,0.05]
+//         uniformDraw([[0.9,0.05,0.05],[0.99,0.005,0.005]])
+    var w = categorical({ps:listener_prior_ps,vs:worlds})
+
+    return [listener_prior_ps,w]
+  })
+}
+
+var s2 = function(prior_ps,w) {
+  return Infer({method: 'enumerate',samples:5000}, function() {
+    
+//     var speaker_prior_ps = dirichlet({alpha:Vector([6,2,1])})
+//     var listener_prior_ps = dirichlet({alpha:Vector([6,2,1])})
+
+    
+//     var speaker_prior_ps = flip(0.1)?[0.6,0.3,0.1]:[0.65,0.3,0.05]
+//     var listener_prior_ps = flip(0.1)?[0.6,0.3,0.1]:[0.65,0.3,0.05]
+//         uniformDraw([[0.9,0.09,0.01],[0.905,0.09,0.0005]])
+//     var u = sample(s1(prior_ps,w))
+    var u = uniformDraw(utterances)
+    var l1_result = l1(u)
+    factor (l1_result.score([prior_ps,w]))
+    return u
+  })
+}
+
+var l2 = function(u) {
+  return Infer({method: 'enumerate',samples:5000}, function() {
+    
+//     var speaker_prior_ps = dirichlet({alpha:Vector([6,2,1])})
+//     var listener_prior_ps = dirichlet({alpha:Vector([6,2,1])})
+
+    
+    var speaker_prior_ps = flip(0.1)?[0.6,0.3,0.1]:[0.65,0.3,0.05]
+    var listener_prior_ps = flip(0.1)?[0.6,0.3,0.1]:[0.65,0.3,0.05]
+//         uniformDraw([[0.9,0.09,0.01],[0.905,0.09,0.0005]])
+    var w = categorical({ps:listener_prior_ps,vs:worlds})
+    var s2_result = s2(speaker_prior_ps,w)
+    factor (s2_result.score(u))
+//     return [listener_prior_ps,w]
+    return [speaker_prior_ps]
+  })
+}
+
+// viz(l0([0.6,0.3,0.1],"great"))
+// viz(l0([0.65,0.3,0.05],"great"))
+// viz(l0([0.6,0.3,0.1],"ok"))
+// viz(l0([0.65,0.3,0.05],"ok"))
+// viz(l0([0.6,0.3,0.1],"terrible"))
+// viz(l0([0.65,0.3,0.05],"terrible"))
+
+// viz(s1([0.6,0.3,0.1],"great"))
+// viz(s1([0.65,0.3,0.05],"great"))
+// viz(s1([0.6,0.3,0.1],"ok"))
+// viz(s1([0.65,0.3,0.05],"ok"))
+// viz(s1([0.6,0.3,0.1],"terrible"))
+// viz(s1([0.65,0.3,0.05],"terrible"))
+// viz(l1_prior())
+// viz(l1("great"))
+// viz(l1("ok"))
+// viz(l1("terrible"))
+
+// viz(s2([0.65,0.3,0.05],"terrible"))
+// viz(s2([0.60,0.3,0.1],"terrible"))
+// viz(s2([0.65,0.3,0.05],"ok"))
+// viz(s2([0.60,0.3,0.1],"ok"))
+// viz(s2([0.65,0.3,0.05],"great"))
+// viz(s2([0.60,0.3,0.1],"great"))
+
+viz(l2("great"))
+viz(l2("ok"))
+viz(l2("terrible"))
