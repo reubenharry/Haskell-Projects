@@ -1,5 +1,3 @@
---todo: introduce Maps to domain, using exceptions not maybe, so that reference failure also exists
-
 
 --presupposition failure
 module ExceptTGrammar where

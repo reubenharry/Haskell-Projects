@@ -1,106 +1,76 @@
 {-|
 Module      : Control.Monad.Bayes.Enumerator
 Description : Exhaustive enumeration of discrete random variables
-Copyright   : (c) Adam Scibior, 2016
+Copyright   : (c) Adam Scibior, 2015-2020
 License     : MIT
-Maintainer  : ams240@cam.ac.uk
+Maintainer  : leonhard.markert@tweag.io
 Stability   : experimental
 Portability : GHC
 
 -}
 
-{-# LANGUAGE RankNTypes,StandaloneDeriving,TypeFamilies,FlexibleInstances,MultiParamTypeClasses,GeneralizedNewtypeDeriving,RankNTypes,TupleSections,FlexibleContexts #-}
-
 module Control.Monad.Bayes.Enumerator (
     Enumerator,
-    toPopulation,
-    hoist,
-    Dist,
     logExplicit,
     explicit,
     evidence,
     mass,
     compact,
     enumerate,
-    expectation
+    expectation,
+    normalForm
             ) where
 
-import Control.Applicative (Applicative, pure, Alternative)
+import Data.AEq (AEq, (===), (~==))
+import Control.Applicative (Alternative)
 import Control.Monad (MonadPlus)
 import Control.Arrow (second)
 import qualified Data.Map as Map
-import Control.Monad.Trans
-import Data.Maybe (fromMaybe)
-import qualified Data.Vector as V
+import qualified Data.Vector.Generic as V
+import Numeric.Log as Log
+import Control.Monad.Trans.Writer
+import Data.Monoid
+import Data.Maybe
 
-import Numeric.LogDomain (LogDomain, fromLogDomain, toLogDomain, NumSpec)
-import Statistics.Distribution.Polymorphic.Discrete
 import Control.Monad.Bayes.Class
-import Control.Monad.Bayes.Simple
-import qualified Control.Monad.Bayes.Population as Pop
-import Control.Monad.Bayes.Deterministic
 
 
--- | A transformer similar to 'Population', but additionally integrates
+-- | An exact inference transformer that integrates
 -- discrete random variables by enumerating all execution paths.
-newtype Enumerator m a = Enumerator {runEnumerator :: Pop.Population m a}
-  deriving(Functor, Applicative, Monad, MonadTrans, MonadIO, Alternative, MonadPlus)
+newtype Enumerator a = Enumerator (WriterT (Product (Log Double)) [] a)
+  deriving(Functor, Applicative, Monad, Alternative, MonadPlus)
 
-instance HasCustomReal m => HasCustomReal (Enumerator m) where
-  type CustomReal (Enumerator m) = CustomReal m
+instance MonadSample Enumerator where
+  random = error "Infinitely supported random variables not supported in Enumerator"
+  bernoulli p = fromList [(True, (Exp . log) p), (False, (Exp . log) (1-p))]
+  categorical v = fromList $ zip [0..] $ map (Exp . log) (V.toList v)
 
-instance {-# OVERLAPPING #-} (CustomReal m ~ r, MonadDist m) =>
-         Sampleable (Discrete r Int) (Enumerator m) where
-  sample d =
-    Enumerator $ Pop.fromWeightedList $ pure $ map (second toLogDomain) $ normalize $ zip [0..] $ V.toList $ weights d
+instance MonadCond Enumerator where
+  score w = fromList [((), w)]
 
-instance {-# OVERLAPPING #-} (Sampleable d m, Monad m) => Sampleable d (Enumerator m) where
-  sample = lift . sample
+instance MonadInfer Enumerator
 
-instance (Monad m, HasCustomReal m) => Conditionable (Enumerator m) where
-  factor w = Enumerator $ factor w
-
-instance MonadDist m => MonadDist (Enumerator m)
-instance MonadDist m => MonadBayes (Enumerator m)
-
--- | Convert 'Enumerator' to 'Population'.
-toPopulation :: Enumerator m a -> Pop.Population m a
-toPopulation = runEnumerator
-
--- | Apply a transformation to the inner monad.
-hoist :: (MonadDist m, MonadDist n, CustomReal m ~ CustomReal n) =>
-  (forall x. m x -> n x) -> Enumerator m a -> Enumerator n a
-hoist f = Enumerator . Pop.hoist f . toPopulation
-
--- | A monad for discrete distributions enumerating all possible paths.
--- Throws an error if a continuous distribution is used.
-type Dist r a = Enumerator (Deterministic r) a
-
--- | Throws an error if continuous random variables were used in 'Dist'.
-ensureDiscrete :: Deterministic r a -> a
-ensureDiscrete =
-  fromMaybe (error "Dist: there were unhandled continuous random variables") .
-  maybeDeterministic
+-- | Construct Enumerator from a list of values and associated weights.
+fromList :: [(a, Log Double)] -> Enumerator a
+fromList = Enumerator . WriterT . map (second Product)
 
 -- | Returns the posterior as a list of weight-value pairs without any post-processing,
 -- such as normalization or aggregation
-logExplicit :: (Real r, NumSpec r) => Dist r a -> [(a, LogDomain r)]
-logExplicit = ensureDiscrete . Pop.runPopulation . toPopulation
+logExplicit :: Enumerator a -> [(a, Log Double)]
+logExplicit (Enumerator m) = map (second getProduct) $ runWriterT m
 
 -- | Same as `toList`, only weights are converted from log-domain.
-explicit :: (Real r, NumSpec r) => Dist r a -> [(a,r)]
-explicit = map (second fromLogDomain) . logExplicit
+explicit :: Enumerator a -> [(a,Double)]
+explicit = map (second (exp . ln)) . logExplicit
 
 -- | Returns the model evidence, that is sum of all weights.
-evidence :: (Real r, NumSpec r) => Dist r a -> LogDomain r
-evidence = ensureDiscrete . Pop.evidence . toPopulation
+evidence :: Enumerator a -> Log Double
+evidence = Log.sum . map snd . logExplicit
 
 -- | Normalized probability mass of a specific value.
-mass :: (Real r, NumSpec r, Ord a) => Dist r a -> a -> r
+mass :: Ord a => Enumerator a -> a -> Double
 mass d = f where
-  f a = case lookup a m of
-             Just p -> p
-             Nothing -> 0
+  f a = fromMaybe 0 $ lookup a m
   m = enumerate d
 
 -- | Aggregate weights of equal values.
@@ -108,18 +78,39 @@ mass d = f where
 compact :: (Num r, Ord a) => [(a,r)] -> [(a,r)]
 compact = Map.toAscList . Map.fromListWith (+)
 
--- | Normalize the weights to sum to 1.
-normalize :: Fractional p => [(a,p)] -> [(a,p)]
-normalize xs = map (second (/ z)) xs where
-  z = sum $ map snd xs
-
 -- | Aggregate and normalize of weights.
 -- The resulting list is sorted ascendingly according to values.
 --
 -- > enumerate = compact . explicit
-enumerate :: (Real r, NumSpec r, Ord a) => Dist r a -> [(a,r)]
-enumerate = normalize . compact . explicit
+enumerate :: Ord a => Enumerator a -> [(a, Double)]
+enumerate d = compact (zip xs ws) where
+  (xs, ws) = second (map (exp . ln) . normalize) $ unzip (logExplicit d)
 
 -- | Expectation of a given function computed using normalized weights.
-expectation :: (Real r, NumSpec r) => (a -> r) -> Dist r a -> r
-expectation f = ensureDiscrete . Pop.popAvg f . Pop.normalize . toPopulation
+expectation :: (a -> Double) -> Enumerator a -> Double
+expectation f = Prelude.sum . map (\(x, w) -> f x * (exp . ln) w) . normalizeWeights . logExplicit
+
+normalize :: [Log Double] -> [Log Double]
+normalize xs = map (/ z) xs where
+  z = Log.sum xs
+
+-- | Divide all weights by their sum.
+normalizeWeights :: [(a, Log Double)] -> [(a, Log Double)]
+normalizeWeights ls = zip xs ps where
+  (xs, ws) = unzip ls
+  ps = normalize ws
+
+-- | 'compact' followed by removing values with zero weight.
+normalForm :: Ord a => Enumerator a -> [(a, Double)]
+normalForm = filter ((/= 0) . snd) . compact . explicit
+
+instance Ord a => Eq (Enumerator a) where
+  p == q = normalForm p == normalForm q
+
+instance Ord a => AEq (Enumerator a) where
+  p === q = xs == ys && ps === qs where
+    (xs,ps) = unzip (normalForm p)
+    (ys,qs) = unzip (normalForm q)
+  p ~== q = xs == ys && ps ~== qs where
+    (xs,ps) = unzip $ filter (not . (~== 0) . snd) $ normalForm p
+    (ys,qs) = unzip $ filter (not . (~== 0) . snd) $ normalForm q

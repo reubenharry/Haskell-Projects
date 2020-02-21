@@ -3,26 +3,25 @@
 
 module ContTGrammar where
 
+import Grammar
+import ListTGrammar
+import StateTGrammar
+import WriterTGrammar
+import ExceptTGrammar
+import ReaderTGrammar
+
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer hiding (tell, writer, listen)
 import Control.Monad.Trans.Cont
 import Control.Monad.Trans.State hiding (put)
 import Control.Monad.Trans.List 
 import Control.Monad.Trans.Except
-import Grammar
 import Control.Monad.Cont
 import Control.Monad.Identity
 import Data.List
-import WriterTGrammar
 import Prelude hiding (log)
-import ListTGrammar
-import StateTGrammar
-import WriterTGrammar
-import ExceptTGrammar
-import ReaderTGrammar
 import Control.Monad.Writer
 import Control.Monad.State
-import Control.Arrow
 
 type C a = ContT Bool (ReaderT Int (ExceptT String (WriterT [Bool] (ListT (StateT [String] ((ListT Identity))))))) a
 
@@ -33,20 +32,17 @@ lowerC = lowerR . flip runContT (return :: Bool -> R Bool)
 reset = ContT . ((>>=) :: R a -> (a -> R b ) -> R b) . flip runContT return
 
 
---implementing barker's scope shifter:
-
-
 ex1C = do
   x <- everyC child
   return $ loves x "Bart"
 
-ex1bC = do
-  x <- everyC' parent
-  return $ loves x "Bart"
+-- ex1bC = do
+--   x <- everyC' parent
+--   return $ loves x "Bart"
 
-ex1cC = notC' $ do
-  x <- aC child
-  return $ loves x "Bart"
+-- ex1cC = notC' $ do
+--   x <- aC child
+--   return $ loves x "Bart"
 
 ex2aC = do
   x <- everyC parent
@@ -77,9 +73,9 @@ ex4C = do
 --interaction with state
 --a parent walked in and she laughed.
 
-ex5C = do
-  x <- notC "Maggie"
-  return $ ran x
+-- ex5C = do
+--   x <- notC "Maggie"
+--   return $ ran x
 
 ex6aC = do
   x <- aC child
@@ -146,12 +142,12 @@ everyC = ContT . some' where some' y x = fmap (all (==True)) $ sequence $ fmap x
 
 
 --needs lifting
-everyC' :: (String -> Bool) -> C String
-everyC' = ContT . everyC''
+-- everyC' :: (String -> Bool) -> C String
+-- everyC' = ContT . everyC''
 
-everyC'' y x = notC' $ do
-  z <- aR y
-  notC' $ x z
+-- everyC'' y x = notC' $ do
+--   z <- aR y
+--   notC' $ x z
 
 
 notC :: a -> C a

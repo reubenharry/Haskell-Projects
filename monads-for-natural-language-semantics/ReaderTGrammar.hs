@@ -1,12 +1,5 @@
---intensionality
 {-# LANGUAGE FlexibleContexts #-}
 
-
---the interesting issue is considering full relativization, so not just vps, but nps etc, to worlds. asudeh does this for doxastic modals, but what about deontic ones, for example?
---john might come into work: in every world where he does, he's not john:
---OOHH: nice to incorporate these here: if john smoked, he wouldn't be john:
-
---secondly, it would be nice to have continuation account for modal scope taking: i think this already exists, mind
 module ReaderTGrammar where
 
 
@@ -20,7 +13,6 @@ import Grammar
 import Control.Monad.Cont
 import Control.Monad.Identity
 import Data.List
-import Test.HUnit
 import Data.Map
 import WriterTGrammar
 import Prelude hiding (log)
@@ -29,41 +21,10 @@ import ListTGrammar
 import StateTGrammar
 import WriterTGrammar
 import ExceptTGrammar
-import Control.Comonad.Trans.Traced
-import Control.Comonad
 import Control.Monad.State
-
 
 type R a = ReaderT Int (ExceptT String (WriterT [Bool] (ListT (StateT [String] ((ListT Identity)))))) a
 
----SIMPLE READER + COMONAD
-type R' a = Traced Int a
-lisaR'' :: R' String
-lisaR'' = traced lisaR'''
-lisaR''' :: Int -> String
-lisaR''' 1 = "Bart"
-lisaR''' 2 = "Homer"
-lisaR''' _ = "Lisa"
-must' :: R' Bool -> Bool
-must' x = (all (== True)) $ fmap (runTraced x) [1,2,3,4,5,6]
-
-instance Monoid Int where
-  mappend = (+)
-  mempty = 0
-
-lowerR' = flip runTraced (0 :: Int)
-
-ex1R' = fmap ran lisaR''
-
----SIMPLE READER + COMONAD
-
-
-notC' :: MonadState [String] m => m a -> m a
-notC' x = do
-  put []
-  x  
-
---OOH, the sequencing requirement is interesting here
 basicMust :: R Bool -> M Bool
 basicMust x = fmap (all (== True)) $ sequence $ fmap (runReaderT x) [1,2,3,4,5,6]
 
