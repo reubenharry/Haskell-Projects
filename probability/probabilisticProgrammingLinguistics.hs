@@ -1,8 +1,8 @@
--- simplest possible RSA example, but this approach extends easily to more complex RSA models.
--- natural extensions to try include: approximate inference in infinite state/utterance space, mutually recursive definition of agents
-module RSA where
-
+import Control.Monad (when)
 import Control.Monad.Bayes.Class
+import Control.Monad.Bayes.Sampler
+import Control.Monad.Bayes.Weighted
+import Control.Monad.Bayes.Traced.Basic
 import Control.Monad.Bayes.Enumerator
 
 -- state type
@@ -20,7 +20,7 @@ utterances = ["1","2","3"]
 
 -- the standard "at least" semantics. i.e. "1" is compatible with any integer greater or equal to 1
 semantics :: Utterance -> State -> Bool
-semantics u w = w >= read u
+semantics = (<=) . read
 
 -- literal listener: hears "1" and exclude no states
 l0 :: MonadInfer m => Utterance -> m State
@@ -43,8 +43,8 @@ l1 u = do
   factor $ realToFrac $ mass (s1 s) u 
   return s
 
-main :: IO()
 main = do
-  print $ enumerate $ l0 "1"
   print $ enumerate $ l1 "1"
-
+  let nsamples = 1001
+  samples <- sampleIOfixed $ prior $ mh nsamples (l1 "1")
+  print $ (/(fromIntegral nsamples)) $ sum $ map fromIntegral $ samples

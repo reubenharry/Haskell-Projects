@@ -1,3 +1,6 @@
+-- now we add a second layer of non-determinism. This is to model focus. For example, if I say:
+-- "BART ran", one proposed semantics is the set of sentences where "Bart" is replaced with other entities
+
 
 module ListTGrammar where
 

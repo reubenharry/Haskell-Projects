@@ -1,3 +1,6 @@
+-- add the reader monad to model intensionality: the idea is that the sentence takes scope over the model, so
+-- we can make statements like: [in all models, P], e.g. "It must be the case that Lisa laughed"
+
 {-# LANGUAGE FlexibleContexts #-}
 
 module ReaderTGrammar where

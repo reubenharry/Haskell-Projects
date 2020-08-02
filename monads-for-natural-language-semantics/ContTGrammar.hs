@@ -1,3 +1,5 @@
+-- finally, the continuation monad gives us scope, allowing us to handle quantifiers
+
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 
@@ -31,6 +33,20 @@ lowerC = lowerR . flip runContT (return :: Bool -> R Bool)
 --charlow's reset which is a retract of the continuation, to limit its scope at the main clause level
 reset = ContT . ((>>=) :: R a -> (a -> R b ) -> R b) . flip runContT return
 
+
+
+main s = do
+  let sentence = (lowerC s) !! 0
+  let at_issue = fst sentence
+  let drefs = snd sentence
+  let focused = at_issue !! 0
+  let side_issue = snd focused
+  let main_sent = fst focused 
+  print ("At issue content: ",main_sent)
+  print ("Side issue content: ",side_issue)
+  print ("Discourse Referents: ",drefs)
+  -- print ("Side issue content: ",side_issue)
+  -- print ("Side issue content: ",side_issue)
 
 ex1C = do
   x <- everyC child
@@ -125,30 +141,12 @@ bartC = lift . lift . lift .lift $ bartL
 aC :: (String -> Bool) -> C String
 aC = (lift) . aR
 
-foobar = lift $ aR (`elem` simpsons)
-
-test :: C Bool
-test = do
-  x <- everyC (`elem` simpsons)
-  y <- foobar
-  return $ loves y x
-
 
 someC :: (String -> Bool) -> C String
 someC = ContT . some' where some' y x = fmap (any (==True)) $ sequence $ fmap x (filter y simpsons)
 
 everyC :: (String -> Bool) -> C String
 everyC = ContT . some' where some' y x = fmap (all (==True)) $ sequence $ fmap x (filter y simpsons)
-
-
---needs lifting
--- everyC' :: (String -> Bool) -> C String
--- everyC' = ContT . everyC''
-
--- everyC'' y x = notC' $ do
---   z <- aR y
---   notC' $ x z
-
 
 notC :: a -> C a
 notC x = ContT $ \y -> fmap not $ y x  

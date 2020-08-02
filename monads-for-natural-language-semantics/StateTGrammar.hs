@@ -1,3 +1,10 @@
+-- now we add state. This means that words, phrases and sentences have the *side-effect* of affecting or reading
+-- the state. For example, consider "If a person is tired, they will eat": here, "a" introduces a (set of) 
+-- potential discourse referents to the state, and "they" selects one of these from the state.
+-- To model this side-effect of (nondeterministic) statefulness we use the StateSet monad (here implemented)
+-- as a state monad transformer on top of a list monad tranformer on top of the identity monad
+
+
 {-# LANGUAGE FlexibleContexts #-}
 
 module StateTGrammar where
@@ -20,7 +27,6 @@ triangle :: MonadState [String] m => String -> m String
 triangle x = do
   put [x]
   return x
-
 
 lowerS = runIdentity . runListT . flip runStateT []
 
@@ -55,7 +61,7 @@ ex1aS = notS ex1S
 
 ex2S = do
   x <- theyS
-  return $ (=="Homer") x
+  return $ ran x
 
 --A parent loves themselves
 ex3S = do

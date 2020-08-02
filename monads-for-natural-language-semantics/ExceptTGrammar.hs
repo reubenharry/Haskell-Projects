@@ -1,5 +1,7 @@
+--presupposition failure: we use the Except monad to model when a presupposition fails, as in: "The current king of 
+  -- France is bald": we don't want either this or its negation to be true of false. We want an error to be thrown.
 
---presupposition failure
+
 module ExceptTGrammar where
 
 import Grammar
@@ -35,7 +37,7 @@ ex2M = do
 --Bart, a child, stopped running.
 ex3M :: M Bool
 ex3M = do
-  x <- commaW child "Bart"
+  x <- commaW child "Lisa"
   stoppedRunning x
 
 --Bart loves Homer, who loves both simpsons 
@@ -52,7 +54,7 @@ ex8bM = do
   x <- bothM child
   return $ x (loves y)
 
---interaction with state: note: can't yet do full interaction, cause it needs cont
+--interaction with state: note: can't yet do full interaction, cause it needs continuations
 --A child stopped running.
 ex4M :: M Bool
 ex4M = do
@@ -107,12 +109,12 @@ bothM :: (String -> Bool) -> M ((String -> Bool) -> Bool)
 bothM x = mapExceptT (fmap (>>= foo)) ((return $ every x) :: M ((String -> Bool) -> Bool)) where foo y = if ((length $ filter x simpsons) /= 2) then Left "fail" else Right y
 
 stoppedRunning :: Monad m => String -> ExceptT String m Bool
-stoppedRunning x = if ran x then ExceptT $ return $ Right $ stoppedRunning'''' x else ExceptT $ return $ Left "presup failure" 
+stoppedRunning x = if ran x then ExceptT $ return $ Right $ stoppedRunning' x else ExceptT $ return $ Left ("presupposition failure: " ++ x ++ " never ran")
 stoppedLoving :: Monad m => String -> String -> ExceptT String m Bool
-stoppedLoving x y = if loves x y then ExceptT $ return $ Right $ stoppedLoving'''' x y else ExceptT $ return $ Left "presupposition failure: they never loved them" 
+stoppedLoving x y = if loves x y then ExceptT $ return $ Right $ stoppedLoving' x y else ExceptT $ return $ Left ("presupposition failure: " ++ y ++ " never loved " ++ x) 
 
-stoppedRunning'''' = (`elem` ["Marge","Maggie"])
-stoppedLoving'''' = curry (`elem` (fmap switch [("Lisa","Bart"), ("Bart", "Bart"),("Maggie", "Bart"),("Maggie", "Homer"),("Marge", "Homer")])) where switch (x,y) = (y,x)
+stoppedRunning' = (`elem` ["Marge","Maggie"])
+stoppedLoving' = curry (`elem` (fmap switch [("Lisa","Bart"), ("Bart", "Bart"),("Maggie", "Bart"),("Maggie", "Homer"),("Marge", "Homer")])) where switch (x,y) = (y,x)
 
 
 stopped :: Monad m => (String -> String -> Bool) -> String -> String -> ExceptT String m Bool

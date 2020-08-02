@@ -1,3 +1,7 @@
+-- we now introduce another side-effect, corresponding to the Writer monad. This is for conventional implicatures:
+-- an example: "Homer, a parent, ate a burger": the important phenomenon is that negating this sentence does
+-- not negate that Homer is a parent. We can model this, as in ex2W
+
 {-# LANGUAGE FlexibleContexts #-}
 
 
@@ -32,6 +36,9 @@ ex1W = do
   x <- commaW parent "Homer"
   return $ teases x y
 
-
+ex2W :: W Bool
+ex2W = do
+  sentence <- ex1W
+  return $ not sentence
 
 

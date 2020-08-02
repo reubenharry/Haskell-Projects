@@ -1,3 +1,5 @@
+-- a semantic grammar, using, effectively, the simply typed lambda calculus 
+
 module Grammar where
 
 import Data.List
