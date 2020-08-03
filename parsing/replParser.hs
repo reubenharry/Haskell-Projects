@@ -1,23 +1,10 @@
-`import Control.Applicative ((<*>),
-                            (*>),
-                            (<$>),
-                            (<|>),
-                            pure)
+-- repl with very simple parsing, via attoparsec
+
+import Control.Applicative ((<*>),(*>),(<$>),(<|>), pure)
 import qualified Data.Attoparsec.Text as A
 import qualified Data.Attoparsec.Combinator as AC
 import Data.Attoparsec.Text (Parser)
 import Data.Text (Text)
-
-
--- timeUnit = TimeUnit <$> integer
---                         <*> timeKeyword
---       where integer = toInteger <$> A.decimal
-
--- timeKeyword = minutes <|>
---               hours
---       where minutes = A.asciiCI "mi" *> pure Minutes
---             hours   = A.asciiCI "h"  *> pure Hours
-
 
 main :: IO ()
 main = do
