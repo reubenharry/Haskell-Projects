@@ -1,3 +1,6 @@
+-- the vanilla Rational Speech Acts model, via probablistic programming
+-- no dsl needed in Haskell - just use a probability monad
+
 import Control.Monad (when)
 import Control.Monad.Bayes.Class
 import Control.Monad.Bayes.Sampler

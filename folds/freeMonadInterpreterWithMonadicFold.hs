@@ -1,3 +1,14 @@
+-- shows how to build up and fold an abstract syntax tree, with a monadic catamorphism
+-- parser combinators via http://dev.stephendiehl.com/fun/002_parsers.html 
+
+-- cool things to take note of: 
+  -- automatic functor derivation, 
+  -- use of free monad
+  -- monadic fold of free monad syntax tree
+  -- use of guards
+  -- combinator parsers, mapping string into free monad tree 
+  -- adhoc polymorphism of eval resolved with type info at print time
+
 -- {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 
 {-# LANGUAGE DeriveFunctor #-}
@@ -182,5 +193,3 @@ main = do
   print $ (iterM eval $ run "(3+4)+6/0" :: [] Int)
 
 
--- cool things: automatic functor, free monad, monadic fold of free monad, guards, combinator parsers, 
--- combinator parsers into free, adhoc polymorphism of eval resolved with type info at print time

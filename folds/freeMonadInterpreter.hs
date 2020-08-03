@@ -1,4 +1,5 @@
--- {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+-- shows how to build up and fold an abstract syntax tree, with a catamorphism
+-- parser combinators via http://dev.stephendiehl.com/fun/002_parsers.html 
 
 {-# LANGUAGE DeriveFunctor #-}
 
